@@ -11,8 +11,18 @@ import random
 import hashlib
 import threading
 import logging
+from pathlib import Path
 from datetime import datetime
 from flask import Flask, request, jsonify, render_template, send_from_directory
+
+# Load .env from project root so GROQ_API_KEY works locally without extra setup
+try:
+    from dotenv import load_dotenv
+    _env_path = Path(__file__).resolve().parents[2] / ".env"
+    load_dotenv(dotenv_path=_env_path, override=False)
+except ImportError:
+    pass  # python-dotenv not installed — env vars must be set manually
+
 from enhancement import maybe_enhance
 
 logging.basicConfig(level=logging.INFO)
