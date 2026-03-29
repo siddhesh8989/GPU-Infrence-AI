@@ -1,10 +1,10 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { createReadStream, existsSync } from "fs";
+import { GoogleGenAI } from "@google/genai";
+import { existsSync } from "fs";
 import { readFile } from "fs/promises";
 import { extname } from "path";
 import { logger } from "../lib/logger.js";
 
-const CONFIDENCE_THRESHOLD = 0.65;
+const CONFIDENCE_THRESHOLD = 1.01;
 const ENHANCED_CONFIDENCE_MIN = 0.85;
 const ENHANCED_CONFIDENCE_MAX = 0.95;
 
@@ -15,6 +15,9 @@ const MIME_MAP: Record<string, string> = {
   ".gif":  "image/gif",
   ".webp": "image/webp",
   ".bmp":  "image/bmp",
+  ".avif": "image/avif",
+  ".heic": "image/heic",
+  ".heif": "image/heif",
 };
 
 interface Prediction {
@@ -46,22 +49,26 @@ async function callGeminiVision(imagePath: string): Promise<string | null> {
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const ai = new GoogleGenAI({ apiKey });
 
     const ext = extname(imagePath).toLowerCase();
     const mimeType = MIME_MAP[ext] ?? "image/jpeg";
     const imageData = await readFile(imagePath);
     const base64 = imageData.toString("base64");
 
-    const result = await model.generateContent([
-      {
-        inlineData: { mimeType, data: base64 },
-      },
-      "What is the main object or subject in this image? Give a single concise label, 1–4 words maximum. Respond with ONLY the label — no punctuation, no explanation.",
-    ]);
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: [
+        {
+          parts: [
+            { inlineData: { mimeType, data: base64 } },
+            { text: "What is the main object or subject in this image? Give a single concise label, 1–4 words maximum. Respond with ONLY the label — no punctuation, no explanation." },
+          ],
+        },
+      ],
+    });
 
-    const text = result.response.text().trim().replace(/[.,!?]+$/, "").trim();
+    const text = (response.text ?? "").trim().replace(/[.,!?]+$/, "").trim();
     return text || null;
   } catch (err) {
     logger.warn({ err }, "Gemini enhancement failed — falling back to model prediction");
