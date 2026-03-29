@@ -15,17 +15,7 @@ paths = [ "/" ]
 localPort = 18889
 
 [services.development]
-run = "pnpm --filter @workspace/gpu-inference run dev"
-
-[services.production]
-build = [ "pnpm", "--filter", "@workspace/gpu-inference", "run", "build" ]
-publicDir = "artifacts/gpu-inference/dist/public"
-serve = "static"
-
-[[services.production.rewrites]]
-from = "/*"
-to = "/index.html"
+run = "python app.py"
 
 [services.env]
 PORT = "18889"
-BASE_PATH = "/"

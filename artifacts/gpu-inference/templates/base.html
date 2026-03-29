@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}GPU Inference Pipeline{% endblock %}</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <a href="/" class="brand">
+        <div class="brand-icon">⚡</div>
+        <span class="brand-name"><span class="text-primary">Tensor</span>Flow</span>
+      </a>
+      <div class="nav-links">
+        <a href="/" class="nav-link {% if active == 'pipeline' %}active{% endif %}">
+          <span class="nav-icon">⬛</span> Pipeline
+        </a>
+        <a href="/metrics" class="nav-link {% if active == 'metrics' %}active{% endif %}">
+          <span class="nav-icon">📊</span> Analytics
+        </a>
+        <a href="/history" class="nav-link {% if active == 'history' %}active{% endif %}">
+          <span class="nav-icon">🕐</span> History
+        </a>
+      </div>
+      <div class="status-badge">
+        <span class="status-dot"></span> SYSTEM ONLINE
+      </div>
+    </div>
+  </nav>
+
+  <!-- Page Content -->
+  <main class="page-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <script src="/static/js/main.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

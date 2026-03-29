@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}History — GPU Inference{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-end">
+  <div>
+    <h2 class="page-title">Inference History</h2>
+    <p class="page-sub">Full telemetry log of all inference operations</p>
+  </div>
+  <button class="btn-danger" onclick="clearHistory()">🗑 Clear All</button>
+</div>
+
+<div class="glass-panel" style="margin-top:1.5rem">
+  <!-- Filters -->
+  <div class="filter-row">
+    <input type="text" class="filter-input" id="searchInput" placeholder="🔍  Search predictions..." oninput="filterTable()">
+    <select class="filter-select" id="modeFilter" onchange="filterTable()">
+      <option value="">All Modes</option>
+      <option value="cpu">CPU</option>
+      <option value="gpu">GPU</option>
+    </select>
+    <select class="filter-select" id="modelFilter" onchange="filterTable()">
+      <option value="">All Models</option>
+      <option value="resnet50">ResNet-50</option>
+      <option value="mobilenet">MobileNet</option>
+      <option value="random_forest">Random Forest</option>
+    </select>
+    <span class="count-badge" id="countBadge">0 records</span>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table" id="historyTable">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Model</th>
+          <th>Mode</th>
+          <th>Prediction</th>
+          <th>Confidence</th>
+          <th>Latency (ms)</th>
+          <th>Batch</th>
+        </tr>
+      </thead>
+      <tbody id="historyBody">
+        <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allRows = [];
+
+function fmt(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+}
+
+async function loadHistory() {
+  const res = await fetch('/api/metrics/history');
+  const data = await res.json();
+  allRows = data.items;
+  filterTable();
+}
+
+function filterTable() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const mode   = document.getElementById('modeFilter').value;
+  const model  = document.getElementById('modelFilter').value;
+
+  const filtered = allRows.filter(r =>
+    (!search || r.prediction.toLowerCase().includes(search)) &&
+    (!mode   || r.computeMode === mode) &&
+    (!model  || r.model === model)
+  );
+
+  document.getElementById('countBadge').textContent = filtered.length + ' records';
+
+  const tbody = document.getElementById('historyBody');
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem">No records match your filters</td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtered.map(r => `
+    <tr>
+      <td class="mono" style="font-size:.75rem;white-space:nowrap">${fmt(r.timestamp)}</td>
+      <td>${r.model}</td>
+      <td><span class="tag ${r.computeMode === 'gpu' ? 'tag-gpu' : 'tag-cpu'}">${r.computeMode.toUpperCase()}</span></td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.prediction}</td>
+      <td class="mono">${(r.confidence * 100).toFixed(1)}%</td>
+      <td class="mono">${r.latencyMs}</td>
+      <td class="mono">${r.batchSize}</td>
+    </tr>
+  `).join('');
+}
+
+async function clearHistory() {
+  if (!confirm('Clear all inference history?')) return;
+  await fetch('/api/metrics/clear', { method: 'DELETE' });
+  allRows = [];
+  filterTable();
+}
+
+loadHistory();
+setInterval(loadHistory, 8000);
+</script>
+{% endblock %}

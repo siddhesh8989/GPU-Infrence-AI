@@ -1,0 +1,463 @@
+{% extends "base.html" %}
+{% block title %}Pipeline — GPU Inference{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section glass-panel">
+  <div class="hero-bg-glow"></div>
+  <div class="hero-content">
+    <div class="badge badge-primary">
+      <span>⚡</span> Core Engine Ready
+    </div>
+    <h1 class="hero-title">
+      Neural Inference <span class="text-gradient">Pipeline</span>
+    </h1>
+    <p class="hero-desc">
+      High-performance compute environment for deep learning models.
+      Configure architecture, precision, and hardware acceleration to benchmark throughput and latency.
+    </p>
+  </div>
+</section>
+
+<!-- Pipeline Visualization -->
+<section class="glass-panel pipeline-section">
+  <div class="pipeline-stages" id="pipelineViz">
+    <div class="pipeline-stage" id="stage-0">
+      <div class="stage-icon">📥</div>
+      <div class="stage-label">Input Buffer</div>
+      <div class="stage-time" id="stage-time-0"></div>
+    </div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-stage" id="stage-1">
+      <div class="stage-icon">⚙️</div>
+      <div class="stage-label">Pre-process</div>
+      <div class="stage-time" id="stage-time-1"></div>
+    </div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-stage" id="stage-2">
+      <div class="stage-icon">📦</div>
+      <div class="stage-label">Batching</div>
+      <div class="stage-time" id="stage-time-2"></div>
+    </div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-stage" id="stage-3">
+      <div class="stage-icon">🔮</div>
+      <div class="stage-label">Inference Engine</div>
+      <div class="stage-time" id="stage-time-3"></div>
+    </div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-stage" id="stage-4">
+      <div class="stage-icon">✅</div>
+      <div class="stage-label">Output Tensor</div>
+      <div class="stage-time" id="stage-time-4"></div>
+    </div>
+  </div>
+</section>
+
+<!-- Main Grid -->
+<div class="main-grid">
+  <!-- Left: Configuration Panel -->
+  <aside class="config-panel glass-panel">
+    <h3 class="panel-title">⚙ Configuration</h3>
+
+    <!-- File Upload -->
+    <div class="field-group">
+      <label class="field-label">INPUT TENSOR (IMAGE)</label>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept="image/*" hidden>
+        <div class="upload-placeholder" id="uploadPlaceholder">
+          <div class="upload-icon">📁</div>
+          <p>Drag & drop or <span class="text-primary" style="cursor:pointer" onclick="document.getElementById('fileInput').click()">click to browse</span></p>
+          <p class="upload-hint">JPG, PNG, GIF, WebP · max 10 MB</p>
+        </div>
+        <div class="upload-preview hidden" id="uploadPreview">
+          <img id="previewImg" src="" alt="preview">
+          <div class="preview-info">
+            <p id="previewName" class="preview-filename"></p>
+            <p id="previewSize" class="preview-filesize"></p>
+            <button class="btn-sm" onclick="clearFile()">✕ Remove</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Compute Mode Toggle -->
+    <div class="field-group">
+      <label class="field-label">COMPUTE MODE</label>
+      <div class="toggle-group" id="modeToggle">
+        <button class="toggle-btn" id="btnCpu" onclick="setMode('cpu')">
+          🖥 CPU
+        </button>
+        <button class="toggle-btn active gpu-mode" id="btnGpu" onclick="setMode('gpu')">
+          ⚡ GPU Accel
+        </button>
+      </div>
+    </div>
+
+    <!-- Model Select -->
+    <div class="field-group">
+      <label class="field-label">ARCHITECTURE</label>
+      <select class="select-input" id="modelSelect">
+        <option value="resnet50">ResNet-50 (Vision)</option>
+        <option value="mobilenet">MobileNet V3 (Efficient Vision)</option>
+        <option value="random_forest">Random Forest (Baseline)</option>
+      </select>
+    </div>
+
+    <!-- Batch Size + Precision -->
+    <div class="two-col">
+      <div class="field-group">
+        <label class="field-label">BATCH SIZE</label>
+        <select class="select-input" id="batchSelect">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="4">4</option>
+          <option value="8">8</option>
+          <option value="16">16</option>
+          <option value="32">32</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label class="field-label">PRECISION</label>
+        <select class="select-input" id="precSelect">
+          <option value="fp32">FP32</option>
+          <option value="fp16">FP16</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="actions">
+      <button class="btn-primary" id="runBtn" onclick="runInference()">
+        <span id="runBtnLabel">▶ Execute Inference</span>
+      </button>
+      <button class="btn-secondary" id="batchBtn" onclick="runBatch()">
+        📊 Run Batch Benchmark
+      </button>
+    </div>
+  </aside>
+
+  <!-- Right: Results Area -->
+  <div class="results-area">
+    <!-- Empty State -->
+    <div class="empty-state glass-panel" id="emptyState">
+      <div class="empty-icon">📡</div>
+      <h3>Awaiting Inference Task</h3>
+      <p>Upload an image tensor and configure the pipeline parameters to execute a forward pass.</p>
+    </div>
+
+    <!-- Inference Result (hidden initially) -->
+    <div class="hidden" id="resultPanel">
+      <!-- Main prediction card -->
+      <div class="result-card glass-panel">
+        <div class="result-glow"></div>
+        <div class="result-header">
+          <div>
+            <p class="result-label">TOP PREDICTION</p>
+            <h2 class="result-prediction" id="resultPrediction">—</h2>
+            <div class="confidence-bar-wrap">
+              <div class="confidence-bar">
+                <div class="confidence-fill" id="confFill"></div>
+              </div>
+              <span class="confidence-pct" id="confPct"></span>
+            </div>
+          </div>
+          <div class="result-badges" id="resultBadges"></div>
+        </div>
+      </div>
+
+      <div class="results-two-col">
+        <!-- Pipeline Telemetry -->
+        <div class="glass-panel result-sub-card">
+          <h4 class="sub-card-title">⚡ Execution Telemetry</h4>
+          <div id="timingBreakdown"></div>
+          <div class="memory-grid" id="memoryGrid"></div>
+        </div>
+
+        <!-- Top Predictions -->
+        <div class="glass-panel result-sub-card">
+          <h4 class="sub-card-title">📊 Class Probabilities</h4>
+          <div id="topPredsList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Batch Result (hidden initially) -->
+    <div class="hidden" id="batchPanel">
+      <div class="glass-panel result-card">
+        <h3 class="batch-title">Batch Benchmark Results</h3>
+        <p class="batch-subtitle" id="batchSubtitle"></p>
+        <div class="batch-summary-grid" id="batchSummary"></div>
+        <div class="chart-container" style="height:220px;margin-top:1.5rem">
+          <canvas id="batchChart"></canvas>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="batchTable">
+            <thead>
+              <tr>
+                <th>Batch Size</th><th>Latency (ms)</th>
+                <th>Throughput (req/s)</th><th>Memory (MB)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// State
+let computeMode = 'gpu';
+let uploadedFileId = null;
+let selectedFile = null;
+let batchChartInstance = null;
+
+function setMode(mode) {
+  computeMode = mode;
+  document.getElementById('btnCpu').classList.toggle('active', mode === 'cpu');
+  document.getElementById('btnCpu').classList.toggle('cpu-mode', mode === 'cpu');
+  document.getElementById('btnGpu').classList.toggle('active', mode === 'gpu');
+  document.getElementById('btnGpu').classList.toggle('gpu-mode', mode === 'gpu');
+}
+
+// File Upload
+const dropZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+dropZone.addEventListener('click', () => { if (!selectedFile) fileInput.click(); });
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+function handleFile(file) {
+  selectedFile = file;
+  uploadedFileId = null;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('previewImg').src = e.target.result;
+    document.getElementById('previewName').textContent = file.name;
+    document.getElementById('previewSize').textContent = formatBytes(file.size);
+    document.getElementById('uploadPlaceholder').classList.add('hidden');
+    document.getElementById('uploadPreview').classList.remove('hidden');
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearFile() {
+  selectedFile = null; uploadedFileId = null;
+  fileInput.value = '';
+  document.getElementById('previewImg').src = '';
+  document.getElementById('uploadPlaceholder').classList.remove('hidden');
+  document.getElementById('uploadPreview').classList.add('hidden');
+}
+
+async function uploadFile() {
+  if (!selectedFile) return null;
+  const form = new FormData();
+  form.append('file', selectedFile);
+  const res = await fetch('/api/upload', { method: 'POST', body: form });
+  if (!res.ok) throw new Error('Upload failed');
+  const data = await res.json();
+  uploadedFileId = data.fileId;
+  return data.fileId;
+}
+
+// Run Inference
+async function runInference() {
+  if (!selectedFile && !uploadedFileId) {
+    alert('Please upload an image first.');
+    return;
+  }
+  const btn = document.getElementById('runBtn');
+  const label = document.getElementById('runBtnLabel');
+  btn.disabled = true;
+  label.textContent = '⏳ Processing...';
+  animatePipeline('running');
+  showPanel('none');
+
+  try {
+    let fid = uploadedFileId;
+    if (!fid) fid = await uploadFile();
+
+    const res = await fetch('/api/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileId:      fid,
+        model:       document.getElementById('modelSelect').value,
+        computeMode: computeMode,
+        batchSize:   parseInt(document.getElementById('batchSelect').value),
+        precision:   document.getElementById('precSelect').value,
+      })
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Inference failed'); }
+    const result = await res.json();
+    animatePipeline('complete', result.pipelineStages);
+    showInferenceResult(result);
+    showPanel('result');
+  } catch (err) {
+    animatePipeline('idle');
+    alert('Error: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    label.textContent = '▶ Execute Inference';
+  }
+}
+
+// Run Batch Benchmark
+async function runBatch() {
+  const btn = document.getElementById('batchBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Benchmarking...';
+  showPanel('none');
+  try {
+    const res = await fetch('/api/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model:       document.getElementById('modelSelect').value,
+        computeMode: computeMode,
+        batchSizes:  [1, 2, 4, 8, 16, 32],
+        precision:   document.getElementById('precSelect').value,
+      })
+    });
+    const data = await res.json();
+    showBatchResult(data);
+    showPanel('batch');
+  } catch (err) {
+    alert('Batch error: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📊 Run Batch Benchmark';
+  }
+}
+
+function showPanel(which) {
+  document.getElementById('emptyState').classList.toggle('hidden', which !== 'none' || which === 'none' && false);
+  document.getElementById('emptyState').classList.add('hidden');
+  document.getElementById('resultPanel').classList.toggle('hidden', which !== 'result');
+  document.getElementById('batchPanel').classList.toggle('hidden', which !== 'batch');
+  if (which === 'none') document.getElementById('emptyState').classList.remove('hidden');
+}
+
+function showInferenceResult(r) {
+  document.getElementById('resultPrediction').textContent = r.prediction;
+  const pct = (r.confidence * 100).toFixed(2);
+  document.getElementById('confFill').style.width = pct + '%';
+  document.getElementById('confFill').style.background = r.confidence > 0.8 ? 'var(--gpu)' : r.confidence > 0.5 ? '#f59e0b' : '#ef4444';
+  document.getElementById('confPct').textContent = pct + '%';
+
+  document.getElementById('resultBadges').innerHTML = `
+    <span class="tag">⏱ ${r.timings.totalMs}ms total</span>
+    <span class="tag">⚡ ${r.timings.throughputRps} req/s</span>
+    <span class="tag ${r.computeMode === 'gpu' ? 'tag-gpu' : 'tag-cpu'}">${r.computeMode.toUpperCase()}</span>
+  `;
+
+  // Timing breakdown
+  const stages = r.pipelineStages;
+  const max = Math.max(...stages.map(s => s.durationMs), 0.1);
+  document.getElementById('timingBreakdown').innerHTML = stages.map(s => `
+    <div class="timing-row">
+      <div class="timing-labels">
+        <span class="timing-name">${s.name}</span>
+        <span class="timing-val">${s.durationMs}ms</span>
+      </div>
+      <div class="timing-bar-bg">
+        <div class="timing-bar-fill" style="width:${Math.max(2,(s.durationMs/max)*100)}%"></div>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('memoryGrid').innerHTML = `
+    <div class="mem-card"><p class="mem-label">🎮 VRAM Sim</p><p class="mem-val">${r.memoryUsage.gpuSimulatedMb} MB</p></div>
+    <div class="mem-card"><p class="mem-label">💾 Heap Used</p><p class="mem-val">${r.memoryUsage.heapUsedMb} MB</p></div>
+  `;
+
+  document.getElementById('topPredsList').innerHTML = r.topPredictions.map(p => `
+    <div class="pred-row">
+      <span class="pred-rank">${p.rank}.</span>
+      <span class="pred-label">${p.label}</span>
+      <span class="pred-conf">${(p.confidence * 100).toFixed(1)}%</span>
+    </div>
+  `).join('');
+}
+
+function showBatchResult(data) {
+  const s = data.summary;
+  document.getElementById('batchSubtitle').textContent =
+    `Model: ${data.model} | Mode: ${data.computeMode} | Precision: ${data.precision}`;
+
+  document.getElementById('batchSummary').innerHTML = `
+    <div class="summary-card primary"><p class="sum-label">Peak Throughput</p><p class="sum-val">${s.peakThroughput} <small>req/s</small></p></div>
+    <div class="summary-card"><p class="sum-label">Best Batch Size</p><p class="sum-val">${s.bestBatchSize}</p></div>
+    <div class="summary-card"><p class="sum-label">Min Latency</p><p class="sum-val">${s.minLatency.toFixed(1)} <small>ms</small></p></div>
+    <div class="summary-card"><p class="sum-label">Avg Memory</p><p class="sum-val">${s.avgMemoryMb.toFixed(0)} <small>MB</small></p></div>
+  `;
+
+  const tbody = document.querySelector('#batchTable tbody');
+  tbody.innerHTML = data.results.map(r => `
+    <tr>
+      <td><strong>${r.batchSize}</strong></td>
+      <td class="mono">${r.latencyMs.toFixed(2)}</td>
+      <td class="mono text-primary">${r.throughputRps.toFixed(1)}</td>
+      <td class="mono">${r.memoryMb.toFixed(0)}</td>
+    </tr>
+  `).join('');
+
+  if (batchChartInstance) batchChartInstance.destroy();
+  const ctx = document.getElementById('batchChart').getContext('2d');
+  batchChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.results.map(r => 'bs=' + r.batchSize),
+      datasets: [{
+        label: 'Throughput (req/s)',
+        data: data.results.map(r => r.throughputRps),
+        backgroundColor: 'rgba(99, 102, 241, 0.7)',
+        borderColor: 'rgba(99, 102, 241, 1)',
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: chartDefaults('Throughput (req/s)')
+  });
+}
+
+// Pipeline Animation
+function animatePipeline(status, stages) {
+  const els = document.querySelectorAll('.pipeline-stage');
+  els.forEach((el, i) => {
+    el.classList.remove('active', 'done');
+    document.getElementById('stage-time-' + i).textContent = '';
+  });
+  if (status === 'running') {
+    let i = 0;
+    function step() {
+      if (i > 0) els[i-1].classList.remove('active'), els[i-1].classList.add('done');
+      if (i < els.length) { els[i].classList.add('active'); i++; setTimeout(step, 350); }
+    }
+    step();
+  } else if (status === 'complete' && stages) {
+    els.forEach((el, i) => {
+      el.classList.add('done');
+      if (stages[i]) document.getElementById('stage-time-' + i).textContent = stages[i].durationMs + 'ms';
+    });
+  }
+}
+
+// Helpers
+function formatBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+</script>
+{% endblock %}

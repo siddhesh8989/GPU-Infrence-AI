@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Analytics — GPU Inference{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2 class="page-title">System Analytics</h2>
+  <p class="page-sub">Aggregated pipeline performance and hardware comparisons</p>
+</div>
+
+<!-- Stats Cards -->
+<div class="stats-grid" id="statsGrid">
+  <div class="stat-card glass-panel">
+    <p class="stat-label">TOTAL INFERENCES</p>
+    <p class="stat-val" id="statTotal">—</p>
+  </div>
+  <div class="stat-card glass-panel">
+    <p class="stat-label">AVG THROUGHPUT</p>
+    <p class="stat-val" id="statThroughput">— <small>req/s</small></p>
+  </div>
+  <div class="stat-card glass-panel">
+    <p class="stat-label">AVG LATENCY</p>
+    <p class="stat-val" id="statLatency">— <small>ms</small></p>
+  </div>
+  <div class="stat-card glass-panel highlight">
+    <p class="stat-label">GPU SPEEDUP</p>
+    <p class="stat-val" id="statSpeedup">— <small>vs CPU</small></p>
+  </div>
+</div>
+
+<!-- Charts Row -->
+<div class="charts-row">
+  <div class="glass-panel chart-card">
+    <div class="chart-header">
+      <h4>Latency by Architecture (CPU vs GPU)</h4>
+    </div>
+    <div class="chart-container">
+      <canvas id="latencyChart"></canvas>
+    </div>
+    <div class="chart-empty hidden" id="latencyEmpty">
+      Run inferences in both CPU and GPU modes to see comparison.
+    </div>
+  </div>
+  <div class="glass-panel chart-card">
+    <div class="chart-header">
+      <h4>Throughput Scaling (Batch Size)</h4>
+    </div>
+    <div class="chart-container">
+      <canvas id="throughputChart"></canvas>
+    </div>
+    <div class="chart-empty hidden" id="throughputEmpty">
+      Run batch benchmarks to populate this chart.
+    </div>
+  </div>
+</div>
+
+<!-- Model Breakdown Table -->
+<div class="glass-panel" id="modelBreakdownSection" style="margin-top:1.5rem">
+  <h4 class="section-title">Model Breakdown</h4>
+  <div class="table-wrap">
+    <table class="data-table" id="modelTable">
+      <thead>
+        <tr>
+          <th>Model</th><th>Inferences</th>
+          <th>Avg Latency (ms)</th><th>Avg Confidence</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- System Info -->
+<div class="glass-panel" id="sysInfoSection" style="margin-top:1.5rem">
+  <h4 class="section-title">System Information</h4>
+  <div class="sysinfo-grid" id="sysInfoGrid"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let latencyChart, throughputChart;
+
+async function loadMetrics() {
+  try {
+    const [mRes, cRes] = await Promise.all([
+      fetch('/api/metrics'),
+      fetch('/api/metrics/compare'),
+    ]);
+    const m = await mRes.json();
+    const c = await cRes.json();
+
+    // Stats
+    document.getElementById('statTotal').textContent = m.totalInferences;
+    document.getElementById('statThroughput').innerHTML = `${m.avgThroughputRps} <small>req/s</small>`;
+    document.getElementById('statLatency').innerHTML = `${m.avgLatencyMs} <small>ms</small>`;
+    document.getElementById('statSpeedup').innerHTML = c.speedupFactor > 0
+      ? `${c.speedupFactor}× <small>vs CPU</small>` : `—`;
+
+    // Latency chart (CPU vs GPU by model)
+    if (c.latencyComparison.length > 0) {
+      document.getElementById('latencyEmpty').classList.add('hidden');
+      const labels = c.latencyComparison.map(d => d.model);
+      const cpuData = c.latencyComparison.map(d => d.cpuLatencyMs);
+      const gpuData = c.latencyComparison.map(d => d.gpuLatencyMs);
+      if (latencyChart) latencyChart.destroy();
+      latencyChart = new Chart(document.getElementById('latencyChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'CPU Latency', data: cpuData, backgroundColor: 'rgba(59,130,246,0.7)', borderColor: 'rgba(59,130,246,1)', borderWidth: 1, borderRadius: 4 },
+            { label: 'GPU Latency', data: gpuData, backgroundColor: 'rgba(34,197,94,0.7)', borderColor: 'rgba(34,197,94,1)', borderWidth: 1, borderRadius: 4 },
+          ]
+        },
+        options: chartDefaults('Latency (ms)')
+      });
+    } else {
+      document.getElementById('latencyEmpty').classList.remove('hidden');
+    }
+
+    // Throughput chart
+    if (c.throughputComparison.length > 0) {
+      document.getElementById('throughputEmpty').classList.add('hidden');
+      const labels = c.throughputComparison.map(d => 'bs=' + d.batchSize);
+      const cpuThr = c.throughputComparison.map(d => d.cpuThroughput);
+      const gpuThr = c.throughputComparison.map(d => d.gpuThroughput);
+      if (throughputChart) throughputChart.destroy();
+      throughputChart = new Chart(document.getElementById('throughputChart').getContext('2d'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'GPU (req/s)', data: gpuThr, borderColor: 'rgba(34,197,94,1)', backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.4, pointRadius: 4 },
+            { label: 'CPU (req/s)', data: cpuThr, borderColor: 'rgba(59,130,246,1)', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.4, pointRadius: 4 },
+          ]
+        },
+        options: chartDefaults('Throughput (req/s)')
+      });
+    } else {
+      document.getElementById('throughputEmpty').classList.remove('hidden');
+    }
+
+    // Model table
+    document.querySelector('#modelTable tbody').innerHTML = m.modelBreakdown.length > 0
+      ? m.modelBreakdown.map(row => `
+          <tr>
+            <td><strong>${row.model}</strong></td>
+            <td>${row.count}</td>
+            <td class="mono">${row.avgLatencyMs}</td>
+            <td class="mono">${(row.avgConfidence * 100).toFixed(1)}%</td>
+          </tr>
+        `).join('')
+      : '<tr><td colspan="4" style="text-align:center;color:var(--muted)">No data yet</td></tr>';
+
+    // System info
+    const si = m.systemInfo;
+    document.getElementById('sysInfoGrid').innerHTML = [
+      ['Python Version', si.pythonVersion],
+      ['Platform', si.platform],
+      ['CPU Cores', si.cpuCores],
+      ['Total Memory', si.totalMemoryMb + ' MB'],
+      ['GPU Available', si.gpuAvailable ? 'Yes ✅' : 'No (simulated) 🔵'],
+      ['Uptime', si.uptime + 's'],
+    ].map(([k,v]) => `
+      <div class="sysinfo-item">
+        <p class="sysinfo-key">${k}</p>
+        <p class="sysinfo-val">${v}</p>
+      </div>
+    `).join('');
+
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+loadMetrics();
+setInterval(loadMetrics, 5000);
+</script>
+{% endblock %}
