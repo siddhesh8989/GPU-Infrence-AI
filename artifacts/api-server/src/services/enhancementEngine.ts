@@ -37,12 +37,15 @@ interface EnhancementResult {
 }
 
 function getClient(): OpenAI | null {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    logger.warn("OPENAI_API_KEY not set — skipping enhancement");
+    logger.warn("GROQ_API_KEY not set — skipping enhancement");
     return null;
   }
-  return new OpenAI({ apiKey });
+  return new OpenAI({
+    apiKey,
+    baseURL: "https://api.groq.com/openai/v1",
+  });
 }
 
 async function callVisionAI(imagePath: string): Promise<string | null> {
@@ -62,7 +65,7 @@ async function callVisionAI(imagePath: string): Promise<string | null> {
     const dataUrl = `data:${mimeType};base64,${base64}`;
 
     const response = await client.chat.completions.create({
-      model: "gpt-4o",
+      model: "meta-llama/llama-4-scout-17b-16e-instruct",
       messages: [
         {
           role: "user",
@@ -82,10 +85,10 @@ async function callVisionAI(imagePath: string): Promise<string | null> {
     });
 
     const text = (response.choices[0]?.message?.content ?? "").trim().replace(/[.,!?]+$/, "").trim();
-    logger.info({ label: text }, "Vision AI label returned");
+    logger.info({ label: text }, "Groq vision label returned");
     return text || null;
   } catch (err) {
-    logger.warn({ err }, "Vision AI enhancement failed — falling back to model prediction");
+    logger.warn({ err }, "Groq vision enhancement failed — falling back to model prediction");
     return null;
   }
 }
