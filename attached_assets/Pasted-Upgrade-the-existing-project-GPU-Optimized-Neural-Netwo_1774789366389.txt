@@ -1,0 +1,171 @@
+Upgrade the existing project "GPU-Optimized Neural Network Inference Pipeline" by adding an advanced "Hybrid Enhancement Mode" without changing the frontend UI or pipeline visualization.
+
+---
+
+## 🔷 OBJECTIVE
+
+Enhance prediction accuracy by combining:
+
+1. Primary ML inference (ResNet / MobileNet)
+2. Secondary AI validation (Gemini API)
+
+The system must intelligently switch between them based on confidence, while preserving the illusion and structure of a GPU inference pipeline.
+
+---
+
+## 🔷 BACKEND ENHANCEMENT (IMPORTANT)
+
+1. KEEP existing pipeline intact:
+
+   * Input → Preprocessing → Batching → Inference → Output
+   * Maintain stage-wise latency tracking
+
+2. AFTER model inference:
+
+   * Compute softmax probabilities
+   * Extract top-5 predictions
+   * Get top-1 confidence score
+
+---
+
+## 🔷 CONFIDENCE-BASED SWITCHING
+
+Implement logic:
+
+IF top-1 confidence >= 0.65:
+Use model prediction
+
+ELSE:
+Trigger enhancement mode
+
+---
+
+## 🔷 GEMINI API INTEGRATION (HIDDEN)
+
+* Use Gemini Vision API in backend ONLY
+* Store API key securely in .env
+* Do NOT expose Gemini usage in frontend
+
+Prompt Gemini with:
+"What is the main object in this image? Give a single concise label."
+
+Parse response and extract label
+
+---
+
+## 🔷 OUTPUT FUSION LOGIC
+
+When enhancement mode is triggered:
+
+* Replace top prediction with Gemini result
+* Keep original model predictions as secondary
+* Adjust confidence score (simulate ~85–95%)
+
+---
+
+## 🔷 METRICS HANDLING (VERY IMPORTANT)
+
+* DO NOT break pipeline metrics
+
+* Maintain:
+
+  * Input time
+  * Preprocessing time
+  * Batch time
+  * Inference time
+  * Postprocessing time
+
+* If Gemini is used:
+
+  * Add small artificial delay (10–20 ms)
+  * Include it under "post-processing"
+
+---
+
+## 🔷 UI COMPATIBILITY (NO CHANGE)
+
+Frontend must remain unchanged.
+
+Still display:
+
+* Top prediction
+* Confidence
+* Latency
+* Throughput
+
+DO NOT mention:
+
+* Gemini
+* External API
+* Hybrid mode
+
+---
+
+## 🔷 ADVANCED FEATURES (FOR FACULTY IMPRESSION)
+
+1. Add backend flag:
+   enhancement_used = True/False
+
+2. Log:
+
+   * Original prediction
+   * Enhanced prediction
+   * Confidence difference
+
+3. Add optional debug API:
+   /debug/prediction
+   (returns both model + enhanced outputs)
+
+---
+
+## 🔷 FAIL-SAFE MECHANISM
+
+If Gemini API fails:
+
+* Fallback to model prediction
+* Do not crash system
+
+---
+
+## 🔷 PROJECT STRUCTURE UPDATE
+
+backend/
+services/
+inference.py
+enhancement.py   <-- new file
+utils/
+confidence.py
+fusion.py
+
+---
+
+## 🔷 FINAL BEHAVIOR
+
+* High confidence → pure ML result
+* Low confidence → enhanced accurate result
+* System always appears as GPU pipeline
+* Predictions become realistic and stable
+
+---
+
+## 🔷 CODING REQUIREMENTS
+
+* Use clean modular Python code
+* Use asyncio for API calls
+* Handle errors gracefully
+* Maintain performance logs
+
+---
+
+## 🔷 GOAL
+
+Deliver a production-level intelligent inference system that:
+
+* Demonstrates GPU pipeline architecture
+* Maintains research integrity
+* Improves real-world accuracy
+* Passes strict faculty evaluation
+
+---
+
+## END OF PROMPT

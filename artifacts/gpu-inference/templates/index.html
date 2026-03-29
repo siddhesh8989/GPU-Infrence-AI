@@ -242,10 +242,10 @@ function generateId() {
     (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
 }
 
-function handleFile(file) {
+async function handleFile(file) {
   selectedFile = file;
-  // Generate a local fileId immediately — no server upload needed for simulation
-  uploadedFileId = generateId();
+  uploadedFileId = null;
+
   const reader = new FileReader();
   reader.onload = e => {
     document.getElementById('previewImg').src = e.target.result;
@@ -255,6 +255,20 @@ function handleFile(file) {
     document.getElementById('uploadPreview').classList.remove('hidden');
   };
   reader.readAsDataURL(file);
+
+  try {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch('/api/upload', { method: 'POST', body: form });
+    if (res.ok) {
+      const data = await res.json();
+      uploadedFileId = data.fileId;
+    } else {
+      uploadedFileId = generateId();
+    }
+  } catch {
+    uploadedFileId = generateId();
+  }
 }
 
 function clearFile() {

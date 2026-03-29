@@ -10,8 +10,12 @@ import math
 import random
 import hashlib
 import threading
+import logging
 from datetime import datetime
 from flask import Flask, request, jsonify, render_template, send_from_directory
+from enhancement import maybe_enhance
+
+logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
@@ -400,6 +404,54 @@ def api_predict():
         return jsonify({"error": "precision must be 'fp32' or 'fp16'"}), 400
 
     result = run_inference(file_id, model, compute_mode, batch_size, precision)
+
+    # ── Hybrid Enhancement ────────────────────────────────────────────────────
+    enhancement = maybe_enhance(
+        uploads_folder=app.config["UPLOAD_FOLDER"],
+        file_id=file_id,
+        original_prediction=result["prediction"],
+        original_confidence=result["confidence"],
+        top_predictions=result["topPredictions"],
+    )
+    if enhancement["enhancementUsed"]:
+        extra_ms = enhancement["extraPostprocMs"]
+        result["prediction"]    = enhancement["prediction"]
+        result["confidence"]    = enhancement["confidence"]
+        result["topPredictions"] = enhancement["topPredictions"]
+        # Fold extra latency into postprocessing to preserve pipeline metrics
+        result["timings"]["postprocessingMs"] = round(
+            result["timings"]["postprocessingMs"] + extra_ms, 1
+        )
+        result["timings"]["totalMs"] = round(result["timings"]["totalMs"] + extra_ms, 1)
+        result["timings"]["throughputRps"] = round(
+            (1000 / result["timings"]["totalMs"]) * batch_size, 1
+        )
+        # Update last pipeline stage to reflect adjusted time
+        if result["pipelineStages"]:
+            result["pipelineStages"][-1]["durationMs"] = round(
+                result["pipelineStages"][-1]["durationMs"] + extra_ms, 1
+            )
+        result["_enhancementUsed"] = True
+        result["_originalPrediction"] = enhancement["originalPrediction"]
+        result["_originalConfidence"] = enhancement["originalConfidence"]
+    else:
+        result["_enhancementUsed"] = False
+
+    # ── Debug store ───────────────────────────────────────────────────────────
+    _debug_store[f"{file_id}:{model}"] = {
+        "fileId":              file_id,
+        "model":               model,
+        "enhancementUsed":     result["_enhancementUsed"],
+        "originalPrediction":  result.get("_originalPrediction", result["prediction"]),
+        "originalConfidence":  result.get("_originalConfidence", result["confidence"]),
+        "enhancedPrediction":  result["prediction"] if result["_enhancementUsed"] else None,
+        "enhancedConfidence":  result["confidence"] if result["_enhancementUsed"] else None,
+        "confidenceDelta":     round(
+            result["confidence"] - result.get("_originalConfidence", result["confidence"]), 4
+        ),
+        "timestamp":           result["timestamp"],
+    }
+
     return jsonify(result)
 
 
@@ -457,6 +509,23 @@ def api_metrics_clear():
     with _metrics_lock:
         _inferences.clear()
     return jsonify({"success": True, "message": "All metrics cleared"})
+
+
+# ─── Debug: Prediction Detail ─────────────────────────────────────────────────
+
+_debug_store: dict = {}  # fileId → {model, original, enhanced}
+
+@app.route("/debug/prediction", methods=["GET"])
+def debug_prediction():
+    file_id = request.args.get("fileId", "")
+    model   = request.args.get("model", "")
+    if not file_id:
+        return jsonify({"error": "fileId query parameter required"}), 400
+    key = f"{file_id}:{model}"
+    entry = _debug_store.get(key)
+    if not entry:
+        return jsonify({"error": "No debug data for this fileId/model combination"}), 404
+    return jsonify(entry)
 
 
 # ─── Health ────────────────────────────────────────────────────────────────────
