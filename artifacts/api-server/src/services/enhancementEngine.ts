@@ -36,12 +36,27 @@ interface EnhancementResult {
   extraPostprocMs: number;
 }
 
-async function callVisionAI(imagePath: string): Promise<string | null> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    logger.warn("OPENAI_API_KEY not set — skipping enhancement");
-    return null;
+function getClient(): OpenAI | null {
+  // Prefer Replit AI integration (always available, no quota issues)
+  const replitBaseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+  const replitApiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  if (replitBaseURL && replitApiKey) {
+    return new OpenAI({ baseURL: replitBaseURL, apiKey: replitApiKey });
   }
+
+  // Fall back to user-provided OpenAI key
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (apiKey) {
+    return new OpenAI({ apiKey });
+  }
+
+  logger.warn("No AI API key configured — skipping enhancement");
+  return null;
+}
+
+async function callVisionAI(imagePath: string): Promise<string | null> {
+  const client = getClient();
+  if (!client) return null;
 
   if (!existsSync(imagePath)) {
     logger.debug({ imagePath }, "Image file not found for enhancement");
@@ -49,8 +64,6 @@ async function callVisionAI(imagePath: string): Promise<string | null> {
   }
 
   try {
-    const client = new OpenAI({ apiKey });
-
     const ext = extname(imagePath).toLowerCase();
     const mimeType = MIME_MAP[ext] ?? "image/jpeg";
     const imageData = await readFile(imagePath);
@@ -58,7 +71,7 @@ async function callVisionAI(imagePath: string): Promise<string | null> {
     const dataUrl = `data:${mimeType};base64,${base64}`;
 
     const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4o",
       messages: [
         {
           role: "user",
