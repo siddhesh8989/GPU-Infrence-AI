@@ -21,7 +21,8 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 ```text
 artifacts-monorepo/
 ├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
+│   ├── api-server/         # Express API server
+│   └── gpu-inference/      # GPU Inference Pipeline frontend (React + Vite)
 ├── lib/                    # Shared libraries
 │   ├── api-spec/           # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks
@@ -34,6 +35,35 @@ artifacts-monorepo/
 ├── tsconfig.json           # Root TS project references
 └── package.json            # Root package with hoisted devDeps
 ```
+
+## App: GPU-Optimized Neural Network Inference Pipeline
+
+A full-stack research-level AI inference pipeline dashboard.
+
+### Features
+- **Image upload** → inference with ResNet-50, MobileNet, or Random Forest
+- **CPU vs GPU simulated inference** with realistic latency differences
+- **Dynamic batching** (batch sizes 1, 2, 4, 8, 16, 32) with throughput tracking
+- **FP32 vs FP16 precision** simulation (FP16 adds ~15% GPU speedup)
+- **Animated pipeline visualization**: Input Buffer → Pre-process → Batching → Inference Engine → Output
+- **Analytics dashboard** with Recharts: CPU vs GPU latency bars, throughput vs batch size line charts
+- **Inference history table** with filtering
+- **Real-time metrics** auto-refreshed every 5 seconds
+
+### API Endpoints
+- `POST /api/inference/upload` — Upload image
+- `POST /api/inference/predict` — Run inference (CPU or GPU mode)
+- `POST /api/inference/batch` — Run batch benchmark
+- `GET /api/metrics` — Aggregated stats
+- `GET /api/metrics/compare` — CPU vs GPU comparison
+- `GET /api/metrics/history` — Inference history
+- `DELETE /api/metrics/clear` — Reset metrics
+
+### Performance Simulation
+- ResNet-50 CPU baseline: ~85ms | GPU: ~10-20ms (6x speedup)
+- MobileNet CPU: ~32ms | GPU: ~4-8ms
+- Random Forest CPU: ~18ms | GPU: ~3-5ms
+- Metrics stored in-memory (up to 500 records); DB table `inferences` available for persistence
 
 ## TypeScript & Composite Projects
 
@@ -52,45 +82,26 @@ Every package extends `tsconfig.base.json` which sets `composite: true`. The roo
 
 ### `artifacts/api-server` (`@workspace/api-server`)
 
-Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
+Express 5 API server. Routes in `src/routes/`, services in `src/services/`.
 
-- Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
-- Depends on: `@workspace/db`, `@workspace/api-zod`
+- Routes: `/api/healthz`, `/api/inference/*`, `/api/metrics/*`
+- Services: `inferenceEngine.ts` (GPU simulation), `metricsStore.ts` (in-memory metrics)
+- Dependencies: multer (file upload), express, cors, pino
 - `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
+
+### `artifacts/gpu-inference` (`@workspace/gpu-inference`)
+
+React + Vite frontend dashboard.
+
+- Pages: `dashboard.tsx` (main), `metrics.tsx` (analytics), `history.tsx` (log)
+- Components: `layout.tsx`, `pipeline-visualization.tsx`, `file-upload.tsx`
+- Charts: Recharts (BarChart, LineChart)
+- Animations: framer-motion
 
 ### `lib/db` (`@workspace/db`)
 
-Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client instance and schema models.
-
-- `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
-- `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas (no models definitions exist right now)
-- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
-- Exports: `.` (pool, db, schema), `./schema` (schema only)
-
-Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
+Database layer using Drizzle ORM. Schema: `inferences` table.
 
 ### `lib/api-spec` (`@workspace/api-spec`)
 
-Owns the OpenAPI 3.1 spec (`openapi.yaml`) and the Orval config (`orval.config.ts`). Running codegen produces output into two sibling packages:
-
-1. `lib/api-client-react/src/generated/` — React Query hooks + fetch client
-2. `lib/api-zod/src/generated/` — Zod schemas
-
-Run codegen: `pnpm --filter @workspace/api-spec run codegen`
-
-### `lib/api-zod` (`@workspace/api-zod`)
-
-Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used by `api-server` for response validation.
-
-### `lib/api-client-react` (`@workspace/api-client-react`)
-
-Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
-
-### `scripts` (`@workspace/scripts`)
-
-Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+OpenAPI 3.1 spec. Run codegen: `pnpm --filter @workspace/api-spec run codegen`

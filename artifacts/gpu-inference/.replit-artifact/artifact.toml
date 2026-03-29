@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "GPU-Optimized Neural Network Inference Pipeline"
+version = "1.0.0"
+id = "artifacts/gpu-inference"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18889
+
+[services.development]
+run = "pnpm --filter @workspace/gpu-inference run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/gpu-inference", "run", "build" ]
+publicDir = "artifacts/gpu-inference/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18889"
+BASE_PATH = "/"

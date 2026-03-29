@@ -1,15 +1,18 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: GPU-Optimized Neural Network Inference Pipeline API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: inference
+    description: Neural network inference operations
+  - name: metrics
+    description: Performance metrics and analytics
 paths:
   /healthz:
     get:
@@ -24,6 +27,142 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /inference/upload:
+    post:
+      operationId: uploadImage
+      tags: [inference]
+      summary: Upload an image for inference
+      description: Upload an image file to be processed by the inference pipeline
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Image file to upload
+              required:
+                - file
+      responses:
+        "200":
+          description: Image uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadResult"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /inference/predict:
+    post:
+      operationId: runInference
+      tags: [inference]
+      summary: Run inference on uploaded image
+      description: Execute neural network inference with specified model and compute mode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InferenceRequest"
+      responses:
+        "200":
+          description: Inference completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InferenceResult"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /inference/batch:
+    post:
+      operationId: runBatchInference
+      tags: [inference]
+      summary: Run batch inference benchmark
+      description: Execute a batch inference benchmark to measure performance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchBenchmarkRequest"
+      responses:
+        "200":
+          description: Batch benchmark completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BatchBenchmarkResult"
+
+  /metrics:
+    get:
+      operationId: getMetrics
+      tags: [metrics]
+      summary: Get performance metrics
+      description: Retrieve all stored performance metrics and statistics
+      responses:
+        "200":
+          description: Metrics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetricsResponse"
+
+  /metrics/compare:
+    get:
+      operationId: getComparison
+      tags: [metrics]
+      summary: Get CPU vs GPU comparison
+      description: Retrieve comparison data between CPU and GPU inference modes
+      responses:
+        "200":
+          description: Comparison data retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComparisonResponse"
+
+  /metrics/history:
+    get:
+      operationId: getHistory
+      tags: [metrics]
+      summary: Get inference history
+      description: Retrieve recent inference results history
+      responses:
+        "200":
+          description: History retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HistoryResponse"
+
+  /metrics/clear:
+    delete:
+      operationId: clearMetrics
+      tags: [metrics]
+      summary: Clear all metrics
+      description: Clear all stored metrics and reset statistics
+      responses:
+        "200":
+          description: Metrics cleared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +173,462 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+
+    UploadResult:
+      type: object
+      properties:
+        fileId:
+          type: string
+          description: Unique identifier for the uploaded file
+        filename:
+          type: string
+        fileSize:
+          type: number
+          description: File size in bytes
+        dimensions:
+          type: object
+          properties:
+            width:
+              type: number
+            height:
+              type: number
+          required:
+            - width
+            - height
+        uploadedAt:
+          type: string
+          format: date-time
+      required:
+        - fileId
+        - filename
+        - fileSize
+        - dimensions
+        - uploadedAt
+
+    InferenceRequest:
+      type: object
+      properties:
+        fileId:
+          type: string
+          description: File ID from upload
+        model:
+          type: string
+          enum: [resnet50, mobilenet, random_forest]
+          description: Model to use for inference
+        computeMode:
+          type: string
+          enum: [cpu, gpu]
+          description: Compute mode
+        batchSize:
+          type: number
+          description: Batch size (1, 2, 4, 8, 16, 32)
+          default: 1
+        precision:
+          type: string
+          enum: [fp32, fp16]
+          description: Floating point precision
+          default: fp32
+      required:
+        - fileId
+        - model
+        - computeMode
+
+    InferenceResult:
+      type: object
+      properties:
+        id:
+          type: string
+        fileId:
+          type: string
+        model:
+          type: string
+        computeMode:
+          type: string
+        batchSize:
+          type: number
+        precision:
+          type: string
+        prediction:
+          type: string
+          description: Top predicted class label
+        confidence:
+          type: number
+          description: Confidence score (0-1)
+        topPredictions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Prediction"
+        timings:
+          $ref: "#/components/schemas/InferenceTimings"
+        memoryUsage:
+          $ref: "#/components/schemas/MemoryUsage"
+        pipelineStages:
+          type: array
+          items:
+            $ref: "#/components/schemas/PipelineStage"
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - id
+        - fileId
+        - model
+        - computeMode
+        - batchSize
+        - precision
+        - prediction
+        - confidence
+        - topPredictions
+        - timings
+        - memoryUsage
+        - pipelineStages
+        - timestamp
+
+    Prediction:
+      type: object
+      properties:
+        label:
+          type: string
+        confidence:
+          type: number
+        rank:
+          type: number
+      required:
+        - label
+        - confidence
+        - rank
+
+    InferenceTimings:
+      type: object
+      properties:
+        preprocessingMs:
+          type: number
+        batchingMs:
+          type: number
+        inferenceMs:
+          type: number
+        postprocessingMs:
+          type: number
+        totalMs:
+          type: number
+        throughputRps:
+          type: number
+          description: Requests per second
+      required:
+        - preprocessingMs
+        - batchingMs
+        - inferenceMs
+        - postprocessingMs
+        - totalMs
+        - throughputRps
+
+    MemoryUsage:
+      type: object
+      properties:
+        heapUsedMb:
+          type: number
+        heapTotalMb:
+          type: number
+        rssMb:
+          type: number
+        gpuSimulatedMb:
+          type: number
+      required:
+        - heapUsedMb
+        - heapTotalMb
+        - rssMb
+        - gpuSimulatedMb
+
+    PipelineStage:
+      type: object
+      properties:
+        name:
+          type: string
+        durationMs:
+          type: number
+        status:
+          type: string
+          enum: [pending, running, complete]
+      required:
+        - name
+        - durationMs
+        - status
+
+    BatchBenchmarkRequest:
+      type: object
+      properties:
+        model:
+          type: string
+          enum: [resnet50, mobilenet, random_forest]
+        batchSizes:
+          type: array
+          items:
+            type: number
+          description: List of batch sizes to benchmark
+        computeMode:
+          type: string
+          enum: [cpu, gpu]
+        precision:
+          type: string
+          enum: [fp32, fp16]
+          default: fp32
+      required:
+        - model
+        - batchSizes
+        - computeMode
+
+    BatchBenchmarkResult:
+      type: object
+      properties:
+        model:
+          type: string
+        computeMode:
+          type: string
+        precision:
+          type: string
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/BatchResult"
+        summary:
+          $ref: "#/components/schemas/BenchmarkSummary"
+      required:
+        - model
+        - computeMode
+        - precision
+        - results
+        - summary
+
+    BatchResult:
+      type: object
+      properties:
+        batchSize:
+          type: number
+        latencyMs:
+          type: number
+        throughputRps:
+          type: number
+        memoryMb:
+          type: number
+      required:
+        - batchSize
+        - latencyMs
+        - throughputRps
+        - memoryMb
+
+    BenchmarkSummary:
+      type: object
+      properties:
+        bestBatchSize:
+          type: number
+        peakThroughput:
+          type: number
+        minLatency:
+          type: number
+        avgMemoryMb:
+          type: number
+      required:
+        - bestBatchSize
+        - peakThroughput
+        - minLatency
+        - avgMemoryMb
+
+    MetricsResponse:
+      type: object
+      properties:
+        totalInferences:
+          type: number
+        avgLatencyMs:
+          type: number
+        avgThroughputRps:
+          type: number
+        cpuInferences:
+          type: number
+        gpuInferences:
+          type: number
+        modelBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/ModelMetric"
+        batchPerformance:
+          type: array
+          items:
+            $ref: "#/components/schemas/BatchPerformanceMetric"
+        systemInfo:
+          $ref: "#/components/schemas/SystemInfo"
+      required:
+        - totalInferences
+        - avgLatencyMs
+        - avgThroughputRps
+        - cpuInferences
+        - gpuInferences
+        - modelBreakdown
+        - batchPerformance
+        - systemInfo
+
+    ModelMetric:
+      type: object
+      properties:
+        model:
+          type: string
+        count:
+          type: number
+        avgLatencyMs:
+          type: number
+        avgConfidence:
+          type: number
+      required:
+        - model
+        - count
+        - avgLatencyMs
+        - avgConfidence
+
+    BatchPerformanceMetric:
+      type: object
+      properties:
+        batchSize:
+          type: number
+        avgLatencyMs:
+          type: number
+        avgThroughputRps:
+          type: number
+      required:
+        - batchSize
+        - avgLatencyMs
+        - avgThroughputRps
+
+    SystemInfo:
+      type: object
+      properties:
+        nodeVersion:
+          type: string
+        platform:
+          type: string
+        cpuCores:
+          type: number
+        totalMemoryMb:
+          type: number
+        gpuAvailable:
+          type: boolean
+        uptime:
+          type: number
+      required:
+        - nodeVersion
+        - platform
+        - cpuCores
+        - totalMemoryMb
+        - gpuAvailable
+        - uptime
+
+    ComparisonResponse:
+      type: object
+      properties:
+        latencyComparison:
+          type: array
+          items:
+            $ref: "#/components/schemas/LatencyComparisonPoint"
+        throughputComparison:
+          type: array
+          items:
+            $ref: "#/components/schemas/ThroughputComparisonPoint"
+        speedupFactor:
+          type: number
+          description: GPU speedup factor over CPU
+      required:
+        - latencyComparison
+        - throughputComparison
+        - speedupFactor
+
+    LatencyComparisonPoint:
+      type: object
+      properties:
+        model:
+          type: string
+        cpuLatencyMs:
+          type: number
+        gpuLatencyMs:
+          type: number
+        improvement:
+          type: number
+          description: Percentage improvement
+      required:
+        - model
+        - cpuLatencyMs
+        - gpuLatencyMs
+        - improvement
+
+    ThroughputComparisonPoint:
+      type: object
+      properties:
+        batchSize:
+          type: number
+        cpuThroughput:
+          type: number
+        gpuThroughput:
+          type: number
+      required:
+        - batchSize
+        - cpuThroughput
+        - gpuThroughput
+
+    HistoryResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/HistoryItem"
+        total:
+          type: number
+      required:
+        - items
+        - total
+
+    HistoryItem:
+      type: object
+      properties:
+        id:
+          type: string
+        model:
+          type: string
+        computeMode:
+          type: string
+        prediction:
+          type: string
+        confidence:
+          type: number
+        latencyMs:
+          type: number
+        batchSize:
+          type: number
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - id
+        - model
+        - computeMode
+        - prediction
+        - confidence
+        - latencyMs
+        - batchSize
+        - timestamp

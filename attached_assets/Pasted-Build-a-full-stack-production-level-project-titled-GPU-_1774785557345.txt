@@ -1,0 +1,231 @@
+Build a full-stack, production-level project titled:
+
+"GPU-Optimized Neural Network Inference Pipeline"
+
+The system must simulate and implement a real-world AI inference pipeline with advanced optimization techniques inspired by research-level systems.
+
+---
+
+## 🔷 CORE REQUIREMENTS
+
+1. BACKEND (FastAPI preferred)
+
+* Use Python FastAPI server
+* Implement REST APIs:
+
+  * /upload (image/video input)
+  * /predict (run inference)
+  * /metrics (return performance stats)
+* Support async processing using asyncio
+
+---
+
+2. MACHINE LEARNING MODEL
+
+---
+
+* Use at least TWO models:
+
+  1. Image Classification (ResNet / MobileNet using PyTorch)
+  2. Optional: Object Detection (YOLOv5 lightweight)
+
+* Add a secondary ML algorithm:
+
+  * Random Forest classifier (scikit-learn) for comparison or hybrid inference
+
+* Allow switching between:
+
+  * CPU mode
+  * Optimized (simulated GPU mode)
+
+---
+
+3. PREPROCESSING MODULE
+
+---
+
+* Resize images
+* Normalize pixel values
+* Convert to tensors
+* Handle batch inputs
+
+---
+
+4. DYNAMIC BATCHING SYSTEM (IMPORTANT)
+
+---
+
+* Implement a batch scheduler:
+
+  * Queue incoming requests
+  * Process multiple inputs together
+* Allow batch size configuration (1, 2, 4, 8, 16, 32)
+* Show how batching improves throughput
+
+---
+
+5. MEMORY & ASYNC OPTIMIZATION
+
+---
+
+* Simulate:
+
+  * Pinned memory buffers
+  * Async data transfer using asyncio
+* Overlap:
+
+  * Data loading + inference
+* Avoid blocking operations
+
+---
+
+6. GPU INFERENCE SIMULATION (VERY IMPORTANT)
+
+---
+
+* If GPU not available:
+
+  * Simulate GPU acceleration by:
+
+    * Parallel execution (multiprocessing/threading)
+    * Reduced artificial latency
+* Add:
+
+  * Mixed precision simulation (FP16 vs FP32)
+  * Faster compute mode toggle
+
+---
+
+7. PERFORMANCE METRICS SYSTEM
+
+---
+
+Track and display:
+
+* Latency (ms)
+* Throughput (requests/sec)
+* Memory usage
+* CPU vs GPU comparison
+* Batch size vs performance
+
+Store results in structured format (JSON or database)
+
+---
+
+8. FRONTEND DASHBOARD (VERY IMPORTANT 🔥)
+
+---
+
+Use:
+
+* HTML + TailwindCSS + JavaScript
+* OR React (preferred)
+
+UI must include:
+
+1. Upload section (image/video)
+2. Mode selector:
+
+   * CPU
+   * GPU optimized
+3. Batch size selector
+4. Real-time output display
+
+---
+
+## 📊 VISUALIZATION (MUST HAVE)
+
+* Graphs using Chart.js or Recharts:
+
+  * Latency vs CPU/GPU
+  * Throughput vs batch size
+  * Performance comparison
+
+---
+
+9. SYSTEM ARCHITECTURE REPRESENTATION
+
+---
+
+* Show pipeline stages in UI:
+  Input → Preprocessing → Batching → GPU → Output
+
+* Animate flow (optional but preferred)
+
+---
+
+10. ADVANCED FEATURES (TO IMPRESS FACULTY)
+
+---
+
+* Async request queue
+* Multi-user request handling
+* Logging system
+* Configurable inference pipeline
+* API documentation (Swagger auto via FastAPI)
+* Modular code structure:
+
+  * routes/
+  * services/
+  * models/
+  * utils/
+
+---
+
+11. OUTPUT FORMAT
+
+---
+
+* Show:
+
+  * Prediction result
+  * Confidence score
+  * Time taken
+
+---
+
+12. PROJECT STRUCTURE
+
+---
+
+backend/
+main.py
+routes/
+services/
+models/
+utils/
+
+frontend/
+dashboard UI
+
+---
+
+13. BONUS (HIGHLY RECOMMENDED)
+
+---
+
+* Add ONNX model support (optional)
+* Add TensorRT simulation toggle
+* Add downloadable report (PDF of metrics)
+
+---
+
+## IMPORTANT:
+
+* Code must be clean, modular, and well-commented
+* Focus on system design, not just model prediction
+* Ensure realistic performance comparison (even if simulated)
+* Make UI modern, responsive, and visually impressive
+
+---
+
+## FINAL GOAL:
+
+Build a research-level project that demonstrates:
+
+* GPU-style parallel inference
+* Batch processing optimization
+* Memory efficiency
+* Real-time AI pipeline behavior
+
+The system should clearly show improvement over CPU-based inference and match IEEE-level project expectations.
