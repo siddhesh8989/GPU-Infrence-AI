@@ -37,21 +37,12 @@ interface EnhancementResult {
 }
 
 function getClient(): OpenAI | null {
-  // Prefer Replit AI integration (always available, no quota issues)
-  const replitBaseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-  const replitApiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-  if (replitBaseURL && replitApiKey) {
-    return new OpenAI({ baseURL: replitBaseURL, apiKey: replitApiKey });
-  }
-
-  // Fall back to user-provided OpenAI key
   const apiKey = process.env.OPENAI_API_KEY;
-  if (apiKey) {
-    return new OpenAI({ apiKey });
+  if (!apiKey) {
+    logger.warn("OPENAI_API_KEY not set — skipping enhancement");
+    return null;
   }
-
-  logger.warn("No AI API key configured — skipping enhancement");
-  return null;
+  return new OpenAI({ apiKey });
 }
 
 async function callVisionAI(imagePath: string): Promise<string | null> {
