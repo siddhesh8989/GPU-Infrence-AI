@@ -224,7 +224,7 @@ function setMode(mode) {
   document.getElementById('btnGpu').classList.toggle('gpu-mode', mode === 'gpu');
 }
 
-// File Upload
+// File Upload — client-side only; inference is simulated so we generate a fileId locally
 const dropZone = document.getElementById('uploadZone');
 const fileInput = document.getElementById('fileInput');
 
@@ -237,9 +237,15 @@ dropZone.addEventListener('drop', e => {
 dropZone.addEventListener('click', () => { if (!selectedFile) fileInput.click(); });
 fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
 
+function generateId() {
+  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+}
+
 function handleFile(file) {
   selectedFile = file;
-  uploadedFileId = null;
+  // Generate a local fileId immediately — no server upload needed for simulation
+  uploadedFileId = generateId();
   const reader = new FileReader();
   reader.onload = e => {
     document.getElementById('previewImg').src = e.target.result;
@@ -259,21 +265,10 @@ function clearFile() {
   document.getElementById('uploadPreview').classList.add('hidden');
 }
 
-async function uploadFile() {
-  if (!selectedFile) return null;
-  const form = new FormData();
-  form.append('file', selectedFile);
-  const res = await fetch('/api/upload', { method: 'POST', body: form });
-  if (!res.ok) throw new Error('Upload failed');
-  const data = await res.json();
-  uploadedFileId = data.fileId;
-  return data.fileId;
-}
-
 // Run Inference
 async function runInference() {
-  if (!selectedFile && !uploadedFileId) {
-    alert('Please upload an image first.');
+  if (!uploadedFileId) {
+    alert('Please select an image first.');
     return;
   }
   const btn = document.getElementById('runBtn');
@@ -285,7 +280,6 @@ async function runInference() {
 
   try {
     let fid = uploadedFileId;
-    if (!fid) fid = await uploadFile();
 
     const res = await fetch('/api/predict', {
       method: 'POST',
