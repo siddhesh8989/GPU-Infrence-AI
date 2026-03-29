@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
 import { existsSync } from "fs";
 import { readFile } from "fs/promises";
 import { extname } from "path";
@@ -36,12 +36,21 @@ interface EnhancementResult {
   extraPostprocMs: number;
 }
 
-async function callGeminiVision(imagePath: string): Promise<string | null> {
-  const apiKey = process.env.GOOGLE_API_KEY;
-  if (!apiKey) {
-    logger.warn("GOOGLE_API_KEY not set — skipping enhancement");
+function getOpenAIClient(): OpenAI | null {
+  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+
+  if (!baseURL || !apiKey) {
+    logger.warn("AI_INTEGRATIONS_OPENAI_BASE_URL or AI_INTEGRATIONS_OPENAI_API_KEY not set — skipping enhancement");
     return null;
   }
+
+  return new OpenAI({ baseURL, apiKey });
+}
+
+async function callVisionAI(imagePath: string): Promise<string | null> {
+  const client = getOpenAIClient();
+  if (!client) return null;
 
   if (!existsSync(imagePath)) {
     logger.debug({ imagePath }, "Image file not found for enhancement");
@@ -49,29 +58,36 @@ async function callGeminiVision(imagePath: string): Promise<string | null> {
   }
 
   try {
-    const ai = new GoogleGenAI({ apiKey });
-
     const ext = extname(imagePath).toLowerCase();
     const mimeType = MIME_MAP[ext] ?? "image/jpeg";
     const imageData = await readFile(imagePath);
     const base64 = imageData.toString("base64");
+    const dataUrl = `data:${mimeType};base64,${base64}`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: [
+    const response = await client.chat.completions.create({
+      model: "gpt-5-mini",
+      messages: [
         {
-          parts: [
-            { inlineData: { mimeType, data: base64 } },
-            { text: "What is the main object or subject in this image? Give a single concise label, 1–4 words maximum. Respond with ONLY the label — no punctuation, no explanation." },
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: { url: dataUrl },
+            },
+            {
+              type: "text",
+              text: "What is the main object or subject in this image? Give a single concise label, 1–4 words maximum. Respond with ONLY the label — no punctuation, no explanation.",
+            },
           ],
         },
       ],
+      max_completion_tokens: 30,
     });
 
-    const text = (response.text ?? "").trim().replace(/[.,!?]+$/, "").trim();
+    const text = (response.choices[0]?.message?.content ?? "").trim().replace(/[.,!?]+$/, "").trim();
     return text || null;
   } catch (err) {
-    logger.warn({ err }, "Gemini enhancement failed — falling back to model prediction");
+    logger.warn({ err }, "Vision AI enhancement failed — falling back to model prediction");
     return null;
   }
 }
@@ -111,8 +127,8 @@ export async function maybeEnhance(params: {
     return base;
   }
 
-  const geminiLabel = await callGeminiVision(imagePath);
-  if (!geminiLabel) {
+  const aiLabel = await callVisionAI(imagePath);
+  if (!aiLabel) {
     return base;
   }
 
@@ -122,7 +138,7 @@ export async function maybeEnhance(params: {
   ) / 10000;
 
   const enhancedPreds: Prediction[] = [
-    { label: geminiLabel, confidence: enhancedConfidence, rank: 1 },
+    { label: aiLabel, confidence: enhancedConfidence, rank: 1 },
   ];
 
   let remaining = Math.round((1.0 - enhancedConfidence) * 10000) / 10000;
@@ -137,12 +153,12 @@ export async function maybeEnhance(params: {
   const extraPostprocMs = Math.round((10 + rng() * 10) * 10) / 10;
 
   logger.info(
-    { originalPrediction, originalConfidence, enhancedPrediction: geminiLabel, enhancedConfidence },
+    { originalPrediction, originalConfidence, enhancedPrediction: aiLabel, enhancedConfidence },
     "Hybrid enhancement applied",
   );
 
   return {
-    prediction: geminiLabel,
+    prediction: aiLabel,
     confidence: enhancedConfidence,
     topPredictions: enhancedPreds,
     enhancementUsed: true,
