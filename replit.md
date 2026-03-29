@@ -33,9 +33,12 @@ artifacts/api-server/                 # Node.js API (port 8080)
 ├── src/
 │   ├── services/enhancementEngine.ts # Groq vision (Node-side, same key)
 │   ├── services/inferenceEngine.ts   # GPU/CPU latency simulation
-│   ├── services/metricsStore.ts      # In-memory metrics
+│   ├── services/metricsStore.ts      # In-memory metrics (no database)
 │   └── routes/                       # Express route handlers
 └── package.json                      # Uses --env-file-if-exists=../../.env
+
+lib/api-zod/                          # Shared Zod request/response schemas
+lib/api-spec/                         # OpenAPI spec
 ```
 
 ## Features
