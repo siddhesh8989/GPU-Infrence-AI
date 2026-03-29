@@ -8,6 +8,7 @@ import time
 import uuid
 import math
 import random
+import hashlib
 import threading
 from datetime import datetime
 from flask import Flask, request, jsonify, render_template, send_from_directory
@@ -62,7 +63,7 @@ def _gpu_latency(cpu_ms: float, batch_size: int, precision: str) -> float:
 def _top_predictions(model: str, seed: float) -> list:
     classes   = RANDOM_FOREST_CLASSES if model == "random_forest" else IMAGENET_CLASSES
     top_k     = 3 if model == "random_forest" else 5
-    rng       = random.Random(int(seed) % 100000)
+    rng       = random.Random(int(seed))
     selected  = rng.sample(classes, min(top_k, len(classes)))
     remaining = 1.0
     preds     = []
@@ -90,9 +91,13 @@ def _memory_usage(compute_mode: str, model: str, batch_size: int) -> dict:
     }
 
 
+def _file_id_seed(file_id: str) -> int:
+    return int(hashlib.md5(file_id.encode()).hexdigest()[:8], 16)
+
+
 def run_inference(file_id: str, model: str, compute_mode: str,
                   batch_size: int, precision: str) -> dict:
-    seed          = time.time()
+    seed          = _file_id_seed(file_id)
     base_cpu      = _base_latency(model)
     jitter        = (random.random() - 0.5) * 10
 

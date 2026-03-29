@@ -1,5 +1,10 @@
-import { randomUUID } from "crypto";
+import { randomUUID, createHash } from "crypto";
 import os from "os";
+
+function fileIdToSeed(fileId: string): number {
+  const hash = createHash("md5").update(fileId).digest("hex");
+  return parseInt(hash.slice(0, 8), 16);
+}
 
 const IMAGENET_CLASSES = [
   "golden retriever", "tabby cat", "African elephant", "bald eagle", "great white shark",
@@ -92,11 +97,24 @@ function simulateGpuSpeedup(cpuLatency: number, batchSize: number, precision: st
   return Math.max(gpuLatency, cpuLatency * 0.12);
 }
 
+function seededRng(seed: number) {
+  let s = seed;
+  return () => {
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    return (s >>> 0) / 0xffffffff;
+  };
+}
+
 function generateTopPredictions(model: string, seed: number): Prediction[] {
   const classes = model === "random_forest" ? RANDOM_FOREST_CLASSES : IMAGENET_CLASSES;
   const topK = model === "random_forest" ? 3 : 5;
+  const rng = seededRng(seed);
 
-  const shuffled = [...classes].sort(() => Math.sin(seed * 9301 + 49297) - 0.5);
+  const shuffled = [...classes];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
   const selected = shuffled.slice(0, topK);
 
   let remaining = 1.0;
@@ -104,7 +122,7 @@ function generateTopPredictions(model: string, seed: number): Prediction[] {
 
   for (let i = 0; i < selected.length; i++) {
     const isLast = i === selected.length - 1;
-    const conf = isLast ? remaining : remaining * (0.4 + Math.random() * 0.3) * (1 - i * 0.05);
+    const conf = isLast ? remaining : remaining * (0.4 + rng() * 0.3) * (1 - i * 0.05);
     const rounded = Math.min(Math.round(conf * 1000) / 1000, remaining);
     predictions.push({ label: selected[i], confidence: rounded, rank: i + 1 });
     remaining -= rounded;
@@ -160,7 +178,7 @@ export async function runInference(params: {
 
   await sleep(Math.min(totalMs, 400));
 
-  const topPredictions = generateTopPredictions(model, Date.now() % 1000);
+  const topPredictions = generateTopPredictions(model, fileIdToSeed(fileId));
   const throughputRps = Math.round((1000 / totalMs) * batchSize * 10) / 10;
 
   const pipelineStages: PipelineStage[] = [
