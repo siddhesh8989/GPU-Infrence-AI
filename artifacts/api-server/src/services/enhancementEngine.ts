@@ -36,21 +36,12 @@ interface EnhancementResult {
   extraPostprocMs: number;
 }
 
-function getOpenAIClient(): OpenAI | null {
-  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-
-  if (!baseURL || !apiKey) {
-    logger.warn("AI_INTEGRATIONS_OPENAI_BASE_URL or AI_INTEGRATIONS_OPENAI_API_KEY not set — skipping enhancement");
+async function callVisionAI(imagePath: string): Promise<string | null> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    logger.warn("OPENAI_API_KEY not set — skipping enhancement");
     return null;
   }
-
-  return new OpenAI({ baseURL, apiKey });
-}
-
-async function callVisionAI(imagePath: string): Promise<string | null> {
-  const client = getOpenAIClient();
-  if (!client) return null;
 
   if (!existsSync(imagePath)) {
     logger.debug({ imagePath }, "Image file not found for enhancement");
@@ -58,6 +49,8 @@ async function callVisionAI(imagePath: string): Promise<string | null> {
   }
 
   try {
+    const client = new OpenAI({ apiKey });
+
     const ext = extname(imagePath).toLowerCase();
     const mimeType = MIME_MAP[ext] ?? "image/jpeg";
     const imageData = await readFile(imagePath);
@@ -65,7 +58,7 @@ async function callVisionAI(imagePath: string): Promise<string | null> {
     const dataUrl = `data:${mimeType};base64,${base64}`;
 
     const response = await client.chat.completions.create({
-      model: "gpt-5-mini",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "user",
@@ -81,10 +74,11 @@ async function callVisionAI(imagePath: string): Promise<string | null> {
           ],
         },
       ],
-      max_completion_tokens: 30,
+      max_tokens: 30,
     });
 
     const text = (response.choices[0]?.message?.content ?? "").trim().replace(/[.,!?]+$/, "").trim();
+    logger.info({ label: text }, "Vision AI label returned");
     return text || null;
   } catch (err) {
     logger.warn({ err }, "Vision AI enhancement failed — falling back to model prediction");
