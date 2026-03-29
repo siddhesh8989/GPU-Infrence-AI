@@ -176,7 +176,12 @@ export async function runInference(params: {
   const postprocessingMs = computeMode === "gpu" ? 1.5 + Math.random() : 3 + Math.random() * 2;
   const totalMs = preprocessingMs + batchingMs + inferenceMs + postprocessingMs;
 
-  await sleep(Math.min(totalMs, 400));
+  // Realistic wall-clock delay: GPU is 10–30 ms, CPU is 120–180 ms
+  if (computeMode === "gpu") {
+    await sleep(10 + Math.floor(Math.random() * 20));
+  } else {
+    await sleep(120 + Math.floor(Math.random() * 60));
+  }
 
   const topPredictions = generateTopPredictions(model, fileIdToSeed(fileId));
   const throughputRps = Math.round((1000 / totalMs) * batchSize * 10) / 10;

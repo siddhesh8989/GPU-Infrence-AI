@@ -1,0 +1,154 @@
+Enhance the existing project "GPU-Optimized Neural Network Inference Pipeline" with the following upgrades. Do NOT break the current UI or pipeline flow. Modify backend logic and extend frontend where required.
+
+---
+
+## 🔷 OBJECTIVE
+
+1. Make GPU mode faster than CPU mode (simulated)
+2. Fix class probability distribution to look realistic
+3. Upgrade Analytics page with ML/system details
+4. Add one advanced feature to complete the project
+5. Remove database dependency and use temporary in-memory storage
+
+---
+
+## 🔷 1. CPU vs GPU LATENCY SIMULATION
+
+Modify inference logic:
+
+* If mode == "CPU":
+  add artificial delay (120–180 ms)
+
+* If mode == "GPU":
+  add small delay (10–30 ms)
+
+Ensure:
+
+* GPU always shows lower latency than CPU
+* Update telemetry values accordingly
+
+---
+
+## 🔷 2. REALISTIC CLASS PROBABILITIES
+
+After getting top prediction:
+
+* Keep top-1 confidence (e.g. 0.85–0.95)
+* Distribute remaining probability among top-5 classes
+
+Implementation:
+
+* Generate 4 smaller probabilities
+* Normalize them so total = 1.0
+* Sort descending
+
+Ensure:
+
+* No random unrelated classes dominating
+* Output looks consistent and believable
+
+---
+
+## 🔷 3. ANALYTICS PAGE UPGRADE
+
+Enhance Analytics tab with:
+
+A. Model Information
+
+* Model name (ResNet-50 / MobileNet)
+* Parameters (~25M)
+* Input size (224x224)
+
+B. Dataset Information
+
+* Dataset: ImageNet
+* Classes: 1000
+* Description of dataset
+
+C. Optimization Techniques
+
+* Dynamic batching
+* Async processing
+* Mixed precision (FP16/INT8)
+* GPU parallelism
+
+D. Performance Graphs
+
+* Latency: CPU vs GPU
+* Throughput vs Batch size
+
+Use Chart.js or existing chart library
+
+---
+
+## 🔷 4. ADD NEW FEATURE (IMPORTANT)
+
+Add: "Confidence & Reliability Panel"
+
+For each prediction show:
+
+* Confidence score (%)
+* Reliability level:
+  HIGH (>80%)
+  MEDIUM (60–80%)
+  LOW (<60%)
+
+If LOW:
+
+* Show warning:
+  "Prediction confidence is low. Results may be inaccurate."
+
+---
+
+## 🔷 5. REMOVE DATABASE
+
+* Remove all DB dependencies (Drizzle/PostgreSQL)
+* Replace with in-memory storage:
+
+Example:
+history = []
+
+* Store:
+  prediction
+  confidence
+  latency
+  timestamp
+
+* Use this for History tab
+
+---
+
+## 🔷 6. SYSTEM INSIGHTS PANEL (BONUS)
+
+Add a small panel showing:
+
+* Simulated GPU Utilization (80–95%)
+* Memory Usage (100–200 MB)
+* Active Threads
+
+Values can be randomly generated but realistic
+
+---
+
+## 🔷 7. CODE REQUIREMENTS
+
+* Keep code modular
+* Do not break existing UI
+* Maintain pipeline animation
+* Ensure all new features integrate smoothly
+
+---
+
+## 🔷 FINAL GOAL
+
+Make the system look like a high-performance, GPU-optimized inference engine with:
+
+* Faster GPU execution
+* Realistic predictions
+* Detailed analytics
+* No database dependency
+* Strong visual and technical presentation
+
+---
+
+## END

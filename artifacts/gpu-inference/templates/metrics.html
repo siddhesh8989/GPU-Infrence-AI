@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-header">
   <h2 class="page-title">System Analytics</h2>
-  <p class="page-sub">Aggregated pipeline performance and hardware comparisons</p>
+  <p class="page-sub">Aggregated pipeline performance, hardware comparisons, and model details</p>
 </div>
 
 <!-- Stats Cards -->
@@ -32,23 +32,123 @@
   <div class="glass-panel chart-card">
     <div class="chart-header">
       <h4>Latency by Architecture (CPU vs GPU)</h4>
+      <span class="chart-note" id="latencyNote"></span>
     </div>
     <div class="chart-container">
       <canvas id="latencyChart"></canvas>
-    </div>
-    <div class="chart-empty hidden" id="latencyEmpty">
-      Run inferences in both CPU and GPU modes to see comparison.
     </div>
   </div>
   <div class="glass-panel chart-card">
     <div class="chart-header">
       <h4>Throughput Scaling (Batch Size)</h4>
+      <span class="chart-note" id="throughputNote"></span>
     </div>
     <div class="chart-container">
       <canvas id="throughputChart"></canvas>
     </div>
-    <div class="chart-empty hidden" id="throughputEmpty">
-      Run batch benchmarks to populate this chart.
+  </div>
+</div>
+
+<!-- Model Information -->
+<div class="glass-panel" style="margin-top:1.5rem">
+  <h4 class="section-title">Model Information</h4>
+  <div class="model-info-grid">
+    <div class="model-info-card glass-panel-inner">
+      <div class="model-info-header">
+        <span class="model-badge model-badge-blue">ResNet-50</span>
+        <span class="model-badge-sub">Vision</span>
+      </div>
+      <div class="model-info-rows">
+        <div class="model-info-row"><span>Parameters</span><strong>~25.6M</strong></div>
+        <div class="model-info-row"><span>Input Size</span><strong>224 × 224</strong></div>
+        <div class="model-info-row"><span>Depth</span><strong>50 layers</strong></div>
+        <div class="model-info-row"><span>Top-1 Acc.</span><strong>76.1%</strong></div>
+        <div class="model-info-row"><span>FLOPs</span><strong>4.1B</strong></div>
+        <div class="model-info-row"><span>Task</span><strong>Image Classification</strong></div>
+      </div>
+    </div>
+    <div class="model-info-card glass-panel-inner">
+      <div class="model-info-header">
+        <span class="model-badge model-badge-green">MobileNet V3</span>
+        <span class="model-badge-sub">Efficient Vision</span>
+      </div>
+      <div class="model-info-rows">
+        <div class="model-info-row"><span>Parameters</span><strong>~5.4M</strong></div>
+        <div class="model-info-row"><span>Input Size</span><strong>224 × 224</strong></div>
+        <div class="model-info-row"><span>Depth</span><strong>28 layers</strong></div>
+        <div class="model-info-row"><span>Top-1 Acc.</span><strong>75.2%</strong></div>
+        <div class="model-info-row"><span>FLOPs</span><strong>0.22B</strong></div>
+        <div class="model-info-row"><span>Task</span><strong>Edge Inference</strong></div>
+      </div>
+    </div>
+    <div class="model-info-card glass-panel-inner">
+      <div class="model-info-header">
+        <span class="model-badge model-badge-orange">Random Forest</span>
+        <span class="model-badge-sub">Baseline</span>
+      </div>
+      <div class="model-info-rows">
+        <div class="model-info-row"><span>Estimators</span><strong>100 trees</strong></div>
+        <div class="model-info-row"><span>Input</span><strong>Feature Vector</strong></div>
+        <div class="model-info-row"><span>Max Depth</span><strong>Unlimited</strong></div>
+        <div class="model-info-row"><span>Criterion</span><strong>Gini Impurity</strong></div>
+        <div class="model-info-row"><span>Min Samples</span><strong>2</strong></div>
+        <div class="model-info-row"><span>Task</span><strong>Baseline Classification</strong></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Dataset Information -->
+<div class="glass-panel" style="margin-top:1.5rem">
+  <h4 class="section-title">Dataset: ImageNet (ILSVRC)</h4>
+  <div class="dataset-grid">
+    <div class="dataset-stat-card">
+      <p class="ds-num">1,000</p>
+      <p class="ds-label">Object Classes</p>
+    </div>
+    <div class="dataset-stat-card">
+      <p class="ds-num">1.28M</p>
+      <p class="ds-label">Training Images</p>
+    </div>
+    <div class="dataset-stat-card">
+      <p class="ds-num">50K</p>
+      <p class="ds-label">Validation Images</p>
+    </div>
+    <div class="dataset-stat-card">
+      <p class="ds-num">100K</p>
+      <p class="ds-label">Test Images</p>
+    </div>
+  </div>
+  <p class="dataset-desc">
+    ImageNet is a large-scale visual recognition dataset used as the primary benchmark for deep learning models.
+    It spans diverse categories including animals, objects, vehicles, food, and scenes.
+    Models pre-trained on ImageNet form the backbone of most modern vision pipelines via transfer learning.
+  </p>
+</div>
+
+<!-- Optimization Techniques -->
+<div class="glass-panel" style="margin-top:1.5rem">
+  <h4 class="section-title">Optimization Techniques</h4>
+  <div class="opt-grid">
+    <div class="opt-card glass-panel-inner">
+      <div class="opt-icon">⚡</div>
+      <h5 class="opt-title">Dynamic Batching</h5>
+      <p class="opt-desc">Requests are grouped into micro-batches at runtime to maximise GPU occupancy without increasing latency beyond SLA thresholds.</p>
+    </div>
+    <div class="opt-card glass-panel-inner">
+      <div class="opt-icon">🔄</div>
+      <h5 class="opt-title">Async Processing</h5>
+      <p class="opt-desc">Non-blocking I/O pipeline allows preprocessing, inference, and postprocessing stages to overlap, hiding memory transfer latency.</p>
+    </div>
+    <div class="opt-card glass-panel-inner">
+      <div class="opt-icon">🎯</div>
+      <h5 class="opt-title">Mixed Precision (FP16/INT8)</h5>
+      <p class="opt-desc">Half-precision arithmetic reduces memory bandwidth requirements by 2× and doubles tensor core throughput on CUDA GPUs.</p>
+    </div>
+    <div class="opt-card glass-panel-inner">
+      <div class="opt-icon">🖥</div>
+      <h5 class="opt-title">GPU Parallelism</h5>
+      <p class="opt-desc">CUDA kernel parallelism distributes matrix multiplications across thousands of GPU cores, achieving near-linear throughput scaling with batch size.</p>
     </div>
   </div>
 </div>
@@ -80,6 +180,21 @@
 <script>
 let latencyChart, throughputChart;
 
+// Static demo data shown before any real runs
+const STATIC_LATENCY = [
+  { model: 'resnet50',      cpuLatencyMs: 97.2, gpuLatencyMs: 14.8 },
+  { model: 'mobilenet',     cpuLatencyMs: 36.5, gpuLatencyMs: 7.2  },
+  { model: 'random_forest', cpuLatencyMs: 21.3, gpuLatencyMs: 11.8 },
+];
+const STATIC_THROUGHPUT = [
+  { batchSize:1,  cpuThroughput:8.4,  gpuThroughput:52.1  },
+  { batchSize:2,  cpuThroughput:12.1, gpuThroughput:88.3  },
+  { batchSize:4,  cpuThroughput:17.8, gpuThroughput:145.2 },
+  { batchSize:8,  cpuThroughput:23.5, gpuThroughput:210.7 },
+  { batchSize:16, cpuThroughput:27.9, gpuThroughput:278.4 },
+  { batchSize:32, cpuThroughput:30.2, gpuThroughput:340.6 },
+];
+
 async function loadMetrics() {
   try {
     const [mRes, cRes] = await Promise.all([
@@ -90,58 +205,50 @@ async function loadMetrics() {
     const c = await cRes.json();
 
     // Stats
-    document.getElementById('statTotal').textContent = m.totalInferences;
-    document.getElementById('statThroughput').innerHTML = `${m.avgThroughputRps} <small>req/s</small>`;
-    document.getElementById('statLatency').innerHTML = `${m.avgLatencyMs} <small>ms</small>`;
+    document.getElementById('statTotal').textContent = m.totalInferences || 0;
+    document.getElementById('statThroughput').innerHTML = `${m.avgThroughputRps || '—'} <small>req/s</small>`;
+    document.getElementById('statLatency').innerHTML = `${m.avgLatencyMs || '—'} <small>ms</small>`;
     document.getElementById('statSpeedup').innerHTML = c.speedupFactor > 0
       ? `${c.speedupFactor}× <small>vs CPU</small>` : `—`;
 
-    // Latency chart (CPU vs GPU by model)
-    if (c.latencyComparison.length > 0) {
-      document.getElementById('latencyEmpty').classList.add('hidden');
-      const labels = c.latencyComparison.map(d => d.model);
-      const cpuData = c.latencyComparison.map(d => d.cpuLatencyMs);
-      const gpuData = c.latencyComparison.map(d => d.gpuLatencyMs);
-      if (latencyChart) latencyChart.destroy();
-      latencyChart = new Chart(document.getElementById('latencyChart').getContext('2d'), {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [
-            { label: 'CPU Latency', data: cpuData, backgroundColor: 'rgba(59,130,246,0.7)', borderColor: 'rgba(59,130,246,1)', borderWidth: 1, borderRadius: 4 },
-            { label: 'GPU Latency', data: gpuData, backgroundColor: 'rgba(34,197,94,0.7)', borderColor: 'rgba(34,197,94,1)', borderWidth: 1, borderRadius: 4 },
-          ]
-        },
-        options: chartDefaults('Latency (ms)')
-      });
-    } else {
-      document.getElementById('latencyEmpty').classList.remove('hidden');
-    }
+    // Latency chart — use real data if available, else static demo
+    const latData  = c.latencyComparison && c.latencyComparison.length > 0 ? c.latencyComparison : STATIC_LATENCY;
+    const isStatic = !(c.latencyComparison && c.latencyComparison.length > 0);
+    document.getElementById('latencyNote').textContent = isStatic ? '(demo data — run inferences to see live results)' : '';
 
-    // Throughput chart
-    if (c.throughputComparison.length > 0) {
-      document.getElementById('throughputEmpty').classList.add('hidden');
-      const labels = c.throughputComparison.map(d => 'bs=' + d.batchSize);
-      const cpuThr = c.throughputComparison.map(d => d.cpuThroughput);
-      const gpuThr = c.throughputComparison.map(d => d.gpuThroughput);
-      if (throughputChart) throughputChart.destroy();
-      throughputChart = new Chart(document.getElementById('throughputChart').getContext('2d'), {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [
-            { label: 'GPU (req/s)', data: gpuThr, borderColor: 'rgba(34,197,94,1)', backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.4, pointRadius: 4 },
-            { label: 'CPU (req/s)', data: cpuThr, borderColor: 'rgba(59,130,246,1)', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.4, pointRadius: 4 },
-          ]
-        },
-        options: chartDefaults('Throughput (req/s)')
-      });
-    } else {
-      document.getElementById('throughputEmpty').classList.remove('hidden');
-    }
+    if (latencyChart) latencyChart.destroy();
+    latencyChart = new Chart(document.getElementById('latencyChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: latData.map(d => d.model),
+        datasets: [
+          { label: 'CPU Latency (ms)', data: latData.map(d => d.cpuLatencyMs), backgroundColor: 'rgba(59,130,246,0.7)', borderColor: 'rgba(59,130,246,1)', borderWidth: 1, borderRadius: 4 },
+          { label: 'GPU Latency (ms)', data: latData.map(d => d.gpuLatencyMs), backgroundColor: 'rgba(34,197,94,0.7)',  borderColor: 'rgba(34,197,94,1)',  borderWidth: 1, borderRadius: 4 },
+        ]
+      },
+      options: chartDefaults('Latency (ms)')
+    });
+
+    // Throughput chart — same fallback
+    const thrData     = c.throughputComparison && c.throughputComparison.length > 0 ? c.throughputComparison : STATIC_THROUGHPUT;
+    const isThrStatic = !(c.throughputComparison && c.throughputComparison.length > 0);
+    document.getElementById('throughputNote').textContent = isThrStatic ? '(demo data)' : '';
+
+    if (throughputChart) throughputChart.destroy();
+    throughputChart = new Chart(document.getElementById('throughputChart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: thrData.map(d => 'bs=' + d.batchSize),
+        datasets: [
+          { label: 'GPU (req/s)', data: thrData.map(d => d.gpuThroughput), borderColor: 'rgba(34,197,94,1)',  backgroundColor: 'rgba(34,197,94,0.1)',  fill: true, tension: 0.4, pointRadius: 4 },
+          { label: 'CPU (req/s)', data: thrData.map(d => d.cpuThroughput), borderColor: 'rgba(59,130,246,1)', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.4, pointRadius: 4 },
+        ]
+      },
+      options: chartDefaults('Throughput (req/s)')
+    });
 
     // Model table
-    document.querySelector('#modelTable tbody').innerHTML = m.modelBreakdown.length > 0
+    document.querySelector('#modelTable tbody').innerHTML = m.modelBreakdown && m.modelBreakdown.length > 0
       ? m.modelBreakdown.map(row => `
           <tr>
             <td><strong>${row.model}</strong></td>
@@ -150,26 +257,28 @@ async function loadMetrics() {
             <td class="mono">${(row.avgConfidence * 100).toFixed(1)}%</td>
           </tr>
         `).join('')
-      : '<tr><td colspan="4" style="text-align:center;color:var(--muted)">No data yet</td></tr>';
+      : '<tr><td colspan="4" style="text-align:center;color:var(--muted)">No data yet — run some inferences</td></tr>';
 
     // System info
     const si = m.systemInfo;
-    document.getElementById('sysInfoGrid').innerHTML = [
-      ['Python Version', si.pythonVersion],
-      ['Platform', si.platform],
-      ['CPU Cores', si.cpuCores],
-      ['Total Memory', si.totalMemoryMb + ' MB'],
-      ['GPU Available', si.gpuAvailable ? 'Yes ✅' : 'No (simulated) 🔵'],
-      ['Uptime', si.uptime + 's'],
-    ].map(([k,v]) => `
-      <div class="sysinfo-item">
-        <p class="sysinfo-key">${k}</p>
-        <p class="sysinfo-val">${v}</p>
-      </div>
-    `).join('');
+    if (si) {
+      document.getElementById('sysInfoGrid').innerHTML = [
+        ['Runtime',      si.pythonVersion || si.nodeVersion],
+        ['Platform',     si.platform],
+        ['CPU Cores',    si.cpuCores],
+        ['Total Memory', si.totalMemoryMb + ' MB'],
+        ['GPU Available', si.gpuAvailable ? 'Yes ✅' : 'No (simulated) 🔵'],
+        ['Uptime',       si.uptime + 's'],
+      ].map(([k,v]) => `
+        <div class="sysinfo-item">
+          <p class="sysinfo-key">${k}</p>
+          <p class="sysinfo-val">${v}</p>
+        </div>
+      `).join('');
+    }
 
   } catch (err) {
-    console.error(err);
+    console.error('Analytics load error:', err);
   }
 }
 

@@ -427,3 +427,59 @@ body {
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
+
+/* ──── Reliability Panel ─────────────────────────────────────────────── */
+.reliability-row { display:flex; gap:1.5rem; flex-wrap:wrap; align-items:flex-start; }
+.reliability-stat { flex:1; min-width:140px; }
+.rel-label { font-size:.67rem; font-family:var(--font-mono); color:var(--muted); letter-spacing:.06em; margin-bottom:.35rem; }
+.rel-val { font-size:1.15rem; font-weight:700; }
+.rel-badge { display:inline-block; padding:.3rem .8rem; border-radius:999px; font-size:.82rem; font-weight:700; }
+.reliability-warning { margin-top:.85rem; padding:.7rem 1rem; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3); border-radius:var(--radius-sm); color:#fca5a5; font-size:.85rem; }
+
+/* ──── System Insights Panel ─────────────────────────────────────────── */
+.sys-insights-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; }
+@media(max-width:768px){ .sys-insights-grid { grid-template-columns:repeat(2,1fr); } }
+.insight-card { background:rgba(0,0,0,.2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:.85rem 1rem; }
+.insight-label { font-size:.67rem; font-family:var(--font-mono); color:var(--muted); letter-spacing:.06em; margin-bottom:.25rem; }
+.insight-val { font-size:1.05rem; font-weight:700; margin-bottom:.5rem; }
+.insight-bar { height:4px; background:rgba(255,255,255,.08); border-radius:2px; overflow:hidden; }
+.insight-bar-fill { height:100%; border-radius:2px; transition:width .4s ease; }
+
+/* ──── Analytics — Model Info ────────────────────────────────────────── */
+.glass-panel-inner { background:rgba(255,255,255,.03); border:1px solid var(--border); border-radius:var(--radius-sm); }
+.model-info-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; }
+@media(max-width:900px){ .model-info-grid { grid-template-columns:repeat(2,1fr); } }
+@media(max-width:560px){ .model-info-grid { grid-template-columns:1fr; } }
+.model-info-card { padding:1rem 1.25rem; }
+.model-info-header { display:flex; align-items:center; gap:.6rem; margin-bottom:.85rem; }
+.model-badge { font-size:.72rem; font-weight:700; padding:.28rem .65rem; border-radius:999px; font-family:var(--font-mono); }
+.model-badge-blue   { background:rgba(59,130,246,.18); color:#93c5fd; }
+.model-badge-green  { background:rgba(34,197,94,.18);  color:#86efac; }
+.model-badge-orange { background:rgba(249,115,22,.18); color:#fdba74; }
+.model-badge-sub { font-size:.72rem; color:var(--muted); }
+.model-info-rows { display:flex; flex-direction:column; gap:.35rem; }
+.model-info-row { display:flex; justify-content:space-between; font-size:.8rem; padding:.28rem 0; border-bottom:1px solid rgba(255,255,255,.04); }
+.model-info-row:last-child { border-bottom:none; }
+.model-info-row span { color:var(--muted); }
+.model-info-row strong { color:var(--text); }
+
+/* ──── Analytics — Dataset ───────────────────────────────────────────── */
+.dataset-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:1rem; }
+@media(max-width:640px){ .dataset-grid { grid-template-columns:repeat(2,1fr); } }
+.dataset-stat-card { background:rgba(0,0,0,.2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:.85rem 1rem; text-align:center; }
+.ds-num { font-size:1.4rem; font-weight:800; color:var(--primary); font-family:var(--font-mono); }
+.ds-label { font-size:.72rem; color:var(--muted); margin-top:.2rem; }
+.dataset-desc { font-size:.82rem; color:var(--muted); line-height:1.6; border-top:1px solid var(--border); padding-top:.85rem; }
+
+/* ──── Analytics — Optimization Techniques ───────────────────────────── */
+.opt-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; }
+@media(max-width:900px){ .opt-grid { grid-template-columns:repeat(2,1fr); } }
+@media(max-width:560px){ .opt-grid { grid-template-columns:1fr; } }
+.opt-card { padding:1rem 1.25rem; }
+.opt-icon { font-size:1.5rem; margin-bottom:.5rem; }
+.opt-title { font-size:.85rem; font-weight:700; margin-bottom:.4rem; color:var(--text); }
+.opt-desc { font-size:.78rem; color:var(--muted); line-height:1.55; }
+
+/* ──── Chart note ────────────────────────────────────────────────────── */
+.chart-header { display:flex; align-items:center; justify-content:space-between; gap:.5rem; }
+.chart-note { font-size:.7rem; color:var(--muted); font-style:italic; }

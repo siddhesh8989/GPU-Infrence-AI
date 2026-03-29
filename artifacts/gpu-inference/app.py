@@ -120,7 +120,11 @@ def run_inference(file_id: str, model: str, compute_mode: str,
     total_ms     = round(preprocess_ms + batching_ms + inference_ms + postproc_ms, 1)
     throughput   = round((1000 / total_ms) * batch_size, 1)
 
-    time.sleep(min(total_ms / 1000.0, 0.5))
+    # Realistic wall-clock delay: GPU is 10–30 ms, CPU is 120–180 ms
+    if compute_mode == "gpu":
+        time.sleep(0.01 + random.random() * 0.02)
+    else:
+        time.sleep(0.12 + random.random() * 0.06)
 
     top_preds = _top_predictions(model, seed)
     result = {
